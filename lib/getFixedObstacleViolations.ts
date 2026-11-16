@@ -294,8 +294,7 @@ const createEvaluator = ({
     // reuse only static context; candidate copper is always checked afresh.
     const currentNets = (nets ??= getNetRepresentatives(srj, ownershipRoutes))
     const violations = new Map<string, FixedObstacleViolation>()
-    const { segments, copperIndex, unfilteredSegmentIndices } =
-      createFixedCopperIndex(routes)
+    let candidateCopper: FixedCopperIndex | undefined
     const obstacles = preparationComplete
       ? relevantObstacles
       : prepareObstacles(currentNets)
@@ -310,6 +309,9 @@ const createEvaluator = ({
       wireGap,
       viaGap,
     } of obstacles) {
+      candidateCopper ??= createFixedCopperIndex(routes)
+      const { segments, copperIndex, unfilteredSegmentIndices } =
+        candidateCopper
       const extent = Math.hypot(obstacle.width, obstacle.height) / 2
       const reach = extent + Math.max(wireGap, viaGap) + 1e-8
       const candidates = new Set([
