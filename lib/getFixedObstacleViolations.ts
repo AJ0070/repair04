@@ -120,8 +120,8 @@ type PreparedObstacle = {
 const createEvaluator = ({
   srj,
   routes: ownershipRoutes,
-  traceClearance = 0.1,
-  viaClearance = 0.1,
+  traceClearance = srj.minTraceToPadEdgeClearance ?? 0.1,
+  viaClearance = srj.minViaEdgeToPadEdgeClearance ?? 0.1,
 }: FixedObstacleViolationInput): ((
   routes: HighDensityRoute[],
 ) => FixedObstacleViolation[]) => {
