@@ -39,8 +39,10 @@ test("native A13 clearance grid after the data phases", async (): Promise<void> 
   const viewport = {
     minX: Math.min(...srj.obstacles.map((pad) => pad.center.x - pad.width)) - 1,
     maxX: Math.max(...srj.obstacles.map((pad) => pad.center.x + pad.width)) + 1,
-    minY: Math.min(...srj.obstacles.map((pad) => pad.center.y - pad.height)) - 1,
-    maxY: Math.max(...srj.obstacles.map((pad) => pad.center.y + pad.height)) + 1,
+    minY:
+      Math.min(...srj.obstacles.map((pad) => pad.center.y - pad.height)) - 1,
+    maxY:
+      Math.max(...srj.obstacles.map((pad) => pad.center.y + pad.height)) + 1,
   }
   const graphics: GraphicsObject = {
     coordinateSystem: "cartesian",
