@@ -120,7 +120,9 @@ export function getClearanceGridAxes({
     if (
       obstacle.shape !== "circle" ||
       obstacle.isNonPlatedHole ||
-      obstacle.isCopperPour
+      obstacle.isCopperPour ||
+      obstacle.layers.length !== 1 ||
+      obstacle.componentId === undefined
     )
       continue
     const { x, y } = obstacle.center
