@@ -103,6 +103,7 @@ export function getClearanceGridAxes({
   bounds: Bounds
   gridSize: number
 }): ClearanceGridAxes {
+  const obstacles: readonly Obstacle[] = srj.obstacles
   const xs = Array.from(
     { length: Math.floor((bounds.maxX - bounds.minX) / gridSize) },
     (_, index): number => bounds.minX + (index + 0.5) * gridSize,
@@ -111,12 +112,12 @@ export function getClearanceGridAxes({
     { length: Math.floor((bounds.maxY - bounds.minY) / gridSize) },
     (_, index): number => bounds.minY + (index + 0.5) * gridSize,
   )
-  if (!hasCircularPadArray(srj.obstacles)) {
+  if (!hasCircularPadArray(obstacles)) {
     return { xs, ys, nearestIndex, hasPadChannels: false }
   }
   const padXs = new Set<number>()
   const padYs = new Set<number>()
-  for (const obstacle of srj.obstacles) {
+  for (const obstacle of obstacles) {
     if (
       obstacle.shape !== "circle" ||
       obstacle.isNonPlatedHole ||
