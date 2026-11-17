@@ -39,6 +39,11 @@ type Barrier = {
   rectBounds?: Bounds
   visitedQuery: number
 }
+type BarrierLayerGroup = {
+  minZ: number
+  maxZ: number
+  cells: Map<number, Map<number, Barrier[]>>
+}
 type ViaPath = { x: number; y: number; previous?: ViaPath }
 
 type ClearancePathPhase =
@@ -409,7 +414,7 @@ export class FindClearancePathSolver extends BaseSolver {
 
       this.barrierCount = barriers.length
     }
-    const cells = new Map<number, Map<number, Barrier[]>>()
+    const barrierLayerGroups: BarrierLayerGroup[] = []
     const queryReach =
       Math.max(route.viaDiameter, traceThickness) / 2 +
       Math.max(
@@ -424,6 +429,18 @@ export class FindClearancePathSolver extends BaseSolver {
 
     this.indexBarrier = (index): void => {
       const barrier = barriers[index]!
+      let layerGroup = barrierLayerGroups.find(
+        (group) => group.minZ === barrier.minZ && group.maxZ === barrier.maxZ,
+      )
+      if (!layerGroup) {
+        layerGroup = {
+          minZ: barrier.minZ,
+          maxZ: barrier.maxZ,
+          cells: new Map(),
+        }
+        barrierLayerGroups.push(layerGroup)
+      }
+      const cells = layerGroup.cells
 
       for (
         let x = Math.floor(Math.max(barrier.minX, bounds.minX - queryReach));
@@ -470,73 +487,76 @@ export class FindClearancePathSolver extends BaseSolver {
       const minY = Math.min(a.y, b.y),
         maxY = Math.max(a.y, b.y)
       const { minZ, maxZ } = getRepairCopperLayerSpan(srj, a, b)
-      for (
-        let x = Math.floor(minX - reach);
-        x <= Math.floor(maxX + reach);
-        x++
-      ) {
-        const column = cells.get(x)
-        if (!column) continue
+      for (const layerGroup of barrierLayerGroups) {
+        if (layerGroup.maxZ < minZ || layerGroup.minZ > maxZ) continue
+        const cells = layerGroup.cells
         for (
-          let y = Math.floor(minY - reach);
-          y <= Math.floor(maxY + reach);
-          y++
+          let x = Math.floor(minX - reach);
+          x <= Math.floor(maxX + reach);
+          x++
         ) {
-          const bucket = column.get(y)
-          if (!bucket) continue
-          for (const barrier of bucket) {
-            if (barrier.viaOnly && !isVia) continue
-            if (barrier.visitedQuery === currentQuery) continue
-            barrier.visitedQuery = currentQuery
-            if (barrier.maxZ < minZ || barrier.minZ > maxZ) continue
-            const requiredGap =
-              barrier.isNonPlatedHole &&
-              !isVia &&
-              srj.minTraceToHoleEdgeClearance !== undefined
-                ? srj.minTraceToHoleEdgeClearance
-                : barrier.viaOnly
-                  ? getViaPadClearance(srj, input.viaClearance, true)
-                  : barrier.rect || barrier.pad
-                    ? margin
-                    : isVia && barrier.minZ !== barrier.maxZ
-                      ? input.viaClearance
-                      : input.traceClearance
-            const clearance = radius + requiredGap
-            // These bounds enclose the entire copper/rotated obstacle. Strict
-            // separation can only rule out a collision; exact boundary cases
-            // still use the same distance calculation and tolerance below.
-            if (
-              maxX + clearance < barrier.minX ||
-              minX - clearance > barrier.maxX ||
-              maxY + clearance < barrier.minY ||
-              minY - clearance > barrier.maxY
-            )
-              continue
-            let distance: number
-            if (barrier.rect) {
-              localA.x =
-                (a.x - barrier.a.x) * barrier.rectCos +
-                (a.y - barrier.a.y) * barrier.rectSin
-              localA.y =
-                -(a.x - barrier.a.x) * barrier.rectSin +
-                (a.y - barrier.a.y) * barrier.rectCos
-              localB.x =
-                (b.x - barrier.a.x) * barrier.rectCos +
-                (b.y - barrier.a.y) * barrier.rectSin
-              localB.y =
-                -(b.x - barrier.a.x) * barrier.rectSin +
-                (b.y - barrier.a.y) * barrier.rectCos
-              distance = segmentToBoundsMinDistance(
-                localA,
-                localB,
-                barrier.rectBounds!,
+          const column = cells.get(x)
+          if (!column) continue
+          for (
+            let y = Math.floor(minY - reach);
+            y <= Math.floor(maxY + reach);
+            y++
+          ) {
+            const bucket = column.get(y)
+            if (!bucket) continue
+            for (const barrier of bucket) {
+              if (barrier.viaOnly && !isVia) continue
+              if (barrier.visitedQuery === currentQuery) continue
+              barrier.visitedQuery = currentQuery
+              const requiredGap =
+                barrier.isNonPlatedHole &&
+                !isVia &&
+                srj.minTraceToHoleEdgeClearance !== undefined
+                  ? srj.minTraceToHoleEdgeClearance
+                  : barrier.viaOnly
+                    ? getViaPadClearance(srj, input.viaClearance, true)
+                    : barrier.rect || barrier.pad
+                      ? margin
+                      : isVia && barrier.minZ !== barrier.maxZ
+                        ? input.viaClearance
+                        : input.traceClearance
+              const clearance = radius + requiredGap
+              // These bounds enclose the entire copper/rotated obstacle. Strict
+              // separation can only rule out a collision; exact boundary cases
+              // still use the same distance calculation and tolerance below.
+              if (
+                maxX + clearance < barrier.minX ||
+                minX - clearance > barrier.maxX ||
+                maxY + clearance < barrier.minY ||
+                minY - clearance > barrier.maxY
               )
-            } else
-              distance =
-                segmentToSegmentMinDistance(a, b, barrier.a, barrier.b) -
-                barrier.radius
-            // Keep exactly feasible corridors open within coordinate precision.
-            if (distance + REGION_EPSILON < clearance) return false
+                continue
+              let distance: number
+              if (barrier.rect) {
+                localA.x =
+                  (a.x - barrier.a.x) * barrier.rectCos +
+                  (a.y - barrier.a.y) * barrier.rectSin
+                localA.y =
+                  -(a.x - barrier.a.x) * barrier.rectSin +
+                  (a.y - barrier.a.y) * barrier.rectCos
+                localB.x =
+                  (b.x - barrier.a.x) * barrier.rectCos +
+                  (b.y - barrier.a.y) * barrier.rectSin
+                localB.y =
+                  -(b.x - barrier.a.x) * barrier.rectSin +
+                  (b.y - barrier.a.y) * barrier.rectCos
+                distance = segmentToBoundsMinDistance(
+                  localA,
+                  localB,
+                  barrier.rectBounds!,
+                )
+              } else
+                distance =
+                  segmentToSegmentMinDistance(a, b, barrier.a, barrier.b) -
+                  barrier.radius
+              // Keep exactly feasible corridors open within coordinate precision.
+              if (distance + REGION_EPSILON < clearance) return false
+            }
           }
         }
       }
