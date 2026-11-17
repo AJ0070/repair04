@@ -663,10 +663,19 @@ export class FindClearancePathSolver extends BaseSolver {
       const startId = idOf(start),
         sx = startId % nx,
         sy = Math.floor(startId / nx) % ny
-      for (let dx = -2; dx <= 2; dx++)
-        for (let dy = -2; dy <= 2; dy++) {
-          const x = sx + dx,
-            y = sy + dy
+      let minSeedX = sx - 2
+      let maxSeedX = sx + 2
+      let minSeedY = sy - 2
+      let maxSeedY = sy + 2
+      if (hasPadChannels) {
+        // Two array indices can span far less than two cells on a pad-refined grid.
+        minSeedX = Math.min(minSeedX, nearestIndex(xs, start.x - 2 * grid))
+        maxSeedX = Math.max(maxSeedX, nearestIndex(xs, start.x + 2 * grid))
+        minSeedY = Math.min(minSeedY, nearestIndex(ys, start.y - 2 * grid))
+        maxSeedY = Math.max(maxSeedY, nearestIndex(ys, start.y + 2 * grid))
+      }
+      for (let x = minSeedX; x <= maxSeedX; x++)
+        for (let y = minSeedY; y <= maxSeedY; y++) {
           if (x < 0 || x >= nx || y < 0 || y >= ny) continue
           const id = idAt(x, y, start.z),
             p = point(id)
