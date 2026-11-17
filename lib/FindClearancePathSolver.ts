@@ -715,6 +715,7 @@ export class FindClearancePathSolver extends BaseSolver {
         ? new Uint8Array(nx * ny)
         : undefined
 
+      const neighbors: number[] = []
       let expanded = 0
       this.searchBatch = (): void => {
         const stopAt = Math.min(expanded + 128, input.maxNodes ?? 30000)
@@ -796,7 +797,7 @@ export class FindClearancePathSolver extends BaseSolver {
           }
           const x = current.id % nx,
             y = Math.floor(current.id / nx) % ny
-          const neighbors: number[] = []
+          let neighborCount = 0
           for (let dx = -1; dx <= 1; dx++)
             for (let dy = -1; dy <= 1; dy++) {
               if (
@@ -807,13 +808,14 @@ export class FindClearancePathSolver extends BaseSolver {
                 y + dy >= ny
               )
                 continue
-              neighbors.push(idAt(x + dx, y + dy, a.z))
+              neighbors[neighborCount++] = idAt(x + dx, y + dy, a.z)
             }
           if (input.allowLayerChanges !== false && clearsDrills(a, viaPath)) {
             for (let z = 0; z < srj.layerCount; z++)
-              if (z !== a.z) neighbors.push(idAt(x, y, z))
+              if (z !== a.z) neighbors[neighborCount++] = idAt(x, y, z)
           }
-          for (const id of neighbors) {
+          for (let neighborIndex = 0; neighborIndex < neighborCount; neighborIndex++) {
+            const id = neighbors[neighborIndex]!
             if (denseSettled ? denseSettled[id] === 1 : settled?.has(id))
               continue
             const b = point(id),
