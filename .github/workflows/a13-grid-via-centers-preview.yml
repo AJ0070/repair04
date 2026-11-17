@@ -1,0 +1,64 @@
+# Publishes only the requested SVG/PNG review images; private test logs remain on the runner.
+name: Native A13 pad-grid with preserved via centers
+on:
+  push:
+    branches: [artifacts/a13-grid-via-centers-preview]
+permissions:
+  contents: write
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: review
+      - uses: actions/checkout@v4
+        with:
+          ref: 07b4e0da4e90f8ed444e408298a9423ff92f582e
+          path: base
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 6cf8fce3a0395f37fb943d1be9e0fb64e2fec408
+          path: head
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.3'
+      - name: Render the unchanged native repro and existing ButterStick test
+        run: |
+          cp base/tests/native-a13-pad-channel-grid.test.ts head/tests/
+          mkdir -p head/tests/fixtures/a13-pad-channel-grid
+          cp base/tests/fixtures/a13-pad-channel-grid/input.srj.json.gz head/tests/fixtures/a13-pad-channel-grid/
+          mkdir -p review/.github/artifacts
+          for variant in base head; do
+            (
+              cd "$variant"
+              bun install > install.private.log 2>&1
+              npm rebuild sharp > sharp.private.log 2>&1
+              BUN_UPDATE_SNAPSHOTS=1 bun test tests/native-a13-pad-channel-grid.test.ts tests/negotiatedClearanceSearch.butterstickMovablePeerVia.test.ts > preview.private.log 2>&1
+              VARIANT="$variant" bun -e '
+                import { readFile, writeFile } from "node:fs/promises";
+                import sharp from "sharp";
+                for (const [name,file] of [
+                  ["native-a13-grid","native-a13-pad-channel-grid.snap.svg"],
+                  ["butterstick-peer","negotiatedClearanceSearch.butterstickMovablePeerVia-visual.snap.svg"]
+                ]) {
+                  const svg=await readFile("tests/__snapshots__/"+file);
+                  const prefix="../review/.github/artifacts/"+name+"-"+process.env.VARIANT;
+                  await writeFile(prefix+".svg",svg);
+                  await writeFile(prefix+".png",await sharp(svg).png().toBuffer());
+                }
+                console.log("REVIEW_IMAGES_RENDERED="+process.env.VARIANT);
+              '
+            )
+          done
+      - name: Commit requested review images
+        working-directory: review
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/artifacts/*.svg .github/artifacts/*.png
+          git commit -m "Render native A13 grid and ButterStick candidate before and after"
+          git push
