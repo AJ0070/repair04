@@ -1,0 +1,22 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`native OrangeCrab clearance search resolves repeated pad aliases 1`] = `
+{
+  "path": [
+    {
+      "x": 1.1310523676080066,
+      "y": -8.445141832287852,
+      "z": 0,
+    },
+    {
+      "x": 8.429318671975786,
+      "y": -8.445141832287852,
+      "z": 0,
+    },
+  ],
+  "stats": {
+    "completionReason": "found",
+    "nodesPopped": 57,
+  },
+}
+`;
