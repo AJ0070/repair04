@@ -73,6 +73,9 @@ test("native OrangeCrab clearance search resolves repeated pad aliases", async (
   const path = solver.getOutput()
   expect(path).not.toBeNull()
   expect({ path, stats: solver.stats }).toMatchSnapshot()
+  expect(connectivity.resolutions).toBeLessThanOrEqual(
+    srj.obstacles.length + (srj.traces?.length ?? 0) + 2,
+  )
 
   const pads = srj.obstacles.filter(
     (obstacle): boolean =>

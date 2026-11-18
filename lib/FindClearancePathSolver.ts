@@ -329,7 +329,11 @@ export class FindClearancePathSolver extends BaseSolver {
 
     this.prepareObstacle = (obstacle): void => {
       // A wire may enter its own pad. A via's annulus must remain outside it.
-      const viaOnly = obstacle.connectedTo.some((name) => net(name) === owner)
+      // createNetResolver already joins every nonempty alias on this obstacle.
+      const connectedTo = obstacle.connectedTo.find((name) => name !== "")
+      const viaOnly =
+        (connectedTo !== undefined && net(connectedTo) === owner) ||
+        (owner === "" && obstacle.connectedTo.includes(""))
       const zs =
         (obstacle as typeof obstacle & { __zLayers?: number[] }).__zLayers ??
         obstacle.zLayers ??
