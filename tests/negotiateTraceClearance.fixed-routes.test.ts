@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { negotiateTraceClearance, type NegotiatedClearanceInput } from "../lib/negotiateTraceClearance"
+import {
+  negotiateTraceClearance,
+  type NegotiatedClearanceInput,
+} from "../lib/negotiateTraceClearance"
 import { NegotiateTraceClearanceSolver } from "../lib/NegotiateTraceClearanceSolver"
 import { getSegmentToSegmentMinDistance as minimumDistanceBetweenSegments } from "../lib/getSegmentToSegmentMinDistance"
 
@@ -8,7 +11,10 @@ test("negotiation retains fixed copper as paths without copying or moving it", (
     connectionName: "saved-data",
     traceThickness: 0.1,
     viaDiameter: 0.3,
-    route: [{ x: -0.5, y: -1, z: 0 }, { x: 0.5, y: 1, z: 0 }],
+    route: [
+      { x: -0.5, y: -1, z: 0 },
+      { x: 0.5, y: 1, z: 0 },
+    ],
     vias: [],
   }
   const original = structuredClone(fixedRoute)
@@ -16,12 +22,21 @@ test("negotiation retains fixed copper as paths without copying or moving it", (
     connectionName: "new-signal",
     traceThickness: 0.1,
     viaDiameter: 0.3,
-    route: [{ x: -2, y: 0, z: 0 }, { x: 2, y: 0, z: 0 }],
+    route: [
+      { x: -2, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 },
+    ],
     vias: [],
   }
   const bounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 }
   const input: NegotiatedClearanceInput = {
-    srj: { bounds, layerCount: 2, minTraceWidth: 0.1, connections: [], obstacles: [] },
+    srj: {
+      bounds,
+      layerCount: 2,
+      minTraceWidth: 0.1,
+      connections: [],
+      obstacles: [],
+    },
     routes: [route],
     fixedRoutes: [fixedRoute],
     bounds,
@@ -48,6 +63,13 @@ test("negotiation retains fixed copper as paths without copying or moving it", (
     const end = result.routes[0]!.route[index]!
     expect(start.z).toBe(0)
     expect(end.z).toBe(0)
-    expect(minimumDistanceBetweenSegments(start, end, fixedRoute.route[0]!, fixedRoute.route[1]!)).toBeGreaterThanOrEqual(0.2 - 1e-8)
+    expect(
+      minimumDistanceBetweenSegments(
+        start,
+        end,
+        fixedRoute.route[0]!,
+        fixedRoute.route[1]!,
+      ),
+    ).toBeGreaterThanOrEqual(0.2 - 1e-8)
   }
 })
