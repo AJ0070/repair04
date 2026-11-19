@@ -103,9 +103,14 @@ export class NegotiateTraceClearanceSolver extends BaseSolver {
       Math.ceil(input.maxPathSearchNodes / 128) +
       input.maxPathSearchCalls *
         (input.routes.reduce((count, route) => count + route.route.length, 0) +
+          (input.fixedRoutes?.reduce(
+            (count, route) => count + route.route.length,
+            0,
+          ) ?? 0) +
           input.srj.obstacles.length * input.srj.layerCount +
           128) +
       input.routes.length +
+      (input.fixedRoutes?.length ?? 0) +
       32
   }
 
@@ -313,11 +318,18 @@ export class NegotiateTraceClearanceSolver extends BaseSolver {
       }
     }
     this.finishSetup = (): void => {
+      for (const route of input.fixedRoutes ?? []) {
+        spans.push({ routeIndex: -1, mutable: false, route })
+      }
       const current = spans.map((span): HighDensityRoute => span.route)
       const fixed = spans
         .filter((span): boolean => !span.mutable)
         .map((span): HighDensityRoute => span.route)
-      const nets = getNetRepresentatives(input.srj, input.routes)
+      let ownershipRoutes = input.routes
+      if (input.fixedRoutes?.length) {
+        ownershipRoutes = [...ownershipRoutes, ...input.fixedRoutes]
+      }
+      const nets = getNetRepresentatives(input.srj, ownershipRoutes)
       const owner = (route: HighDensityRoute): string =>
         nets.get(route.connectionName) ?? route.connectionName
       // Span interiors can be displaced, but their fixed anchor sites cannot.

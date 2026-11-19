@@ -38,6 +38,8 @@ type Copper = {
   immutable: boolean
 }
 export type NegotiatedClearanceInput = {
+  /** Read-only copper paths: considered by search and omitted from output. */
+  fixedRoutes?: HighDensityRoute[]
   srj: SimpleRouteJson & { allowBlindAndBuriedVias?: boolean }
   routes: HighDensityRoute[]
   bounds: Bounds
@@ -231,11 +233,18 @@ export function negotiateTraceClearance(
       })
     }
   }
+  for (const route of input.fixedRoutes ?? []) {
+    spans.push({ routeIndex: -1, mutable: false, route })
+  }
   const current = spans.map((span): HighDensityRoute => span.route)
   const fixed = spans
     .filter((span): boolean => !span.mutable)
     .map((span): HighDensityRoute => span.route)
-  const nets = getNetRepresentatives(input.srj, input.routes)
+  let ownershipRoutes = input.routes
+  if (input.fixedRoutes?.length) {
+    ownershipRoutes = [...ownershipRoutes, ...input.fixedRoutes]
+  }
+  const nets = getNetRepresentatives(input.srj, ownershipRoutes)
   const owner = (route: HighDensityRoute): string =>
     nets.get(route.connectionName) ?? route.connectionName
   // Span interiors can be displaced, but their fixed anchor sites cannot.
